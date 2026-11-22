@@ -4,8 +4,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +27,8 @@ public final class DeathHandler {
                 Component.literal("¡Permadeath!").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
                 Component.literal(name + " ha muerto").withStyle(ChatFormatting.WHITE),
                 10, 80, 30);
-        for (ServerPlayer p : new ArrayList<>(server.getPlayerList().getPlayers())) {
-            p.playNotifySound(SoundEvents.WITHER_SPAWN, SoundSource.MASTER, 1.0f, 1.0f);
-        }
+        // Sonido global: el ultimo parametro (volumen minimo = 1) lo hace audible sin importar la distancia
+        ServerUtil.run(server, "execute as @a at @s run playsound minecraft:entity.wither.spawn master @s ~ ~ ~ 1 1 1");
 
         // 3) Chat: mensaje oficial
         Component head = Component.literal("Este es el comienzo del sufrimiento eterno de ")
