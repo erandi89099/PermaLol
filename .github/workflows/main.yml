@@ -14,8 +14,9 @@ jobs:
         with:
           gradle-version: 9.5.1
       - name: Build
+        working-directory: permadeath-mod
         run: gradle build --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: permadeath-mod
-          path: build/libs/*.jar
+          path: permadeath-mod/build/libs/*.jar
