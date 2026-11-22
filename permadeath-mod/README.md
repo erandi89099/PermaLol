@@ -1,0 +1,37 @@
+# Permadeath (Fabric, Minecraft 26.2)
+
+Mod de servidor (los jugadores pueden entrar con cliente vanilla) para la serie Permadeath.
+
+## Calendario (110 dias reales)
+El dia 1 empieza al abrir el mundo por primera vez; cada 24 h reales sube un dia.
+- Dias 1-9: Minecraft vanilla + tormenta por muertes.
+- Dia 10, 20, 30 ... 110: aumento de dificultad (fase 1 ... fase 11).
+
+## Siempre activo
+- Al morir: titulo **¡Permadeath!** + "<jugador> ha muerto" en pantalla y sonido para todos, mensaje en chat
+  "Este es el comienzo del sufrimiento eterno de X. ¡HA SIDO PERMABANEADO!", mensaje de muerte personalizado
+  del jugador, y baneo a los 5 s.
+- **Tormenta perpetua** (solo Overworld): cada muerte suma tantas horas REALES como el numero del dia. Acumulable.
+- Primera vez que entra un jugador: ventana para escribir su mensaje de muerte (tambien: `/permadeath mensaje <texto>`).
+
+## Dia 10 (fase 1)
+- Todas las aranas (y aranas de cueva) reciben entre 1 y 3 efectos infinitos al azar: Velocidad III, Fuerza IV,
+  Salto V, Brillo, Regeneracion IV, Invisibilidad, Caida lenta, Resistencia III.
+- Doble de mobs hostiles.
+- Minimo 4 jugadores durmiendo para pasar la noche.
+
+## Comandos
+- `/permadeath estado`, `/permadeath mensaje <texto>` (todos)
+- `/permadeath revivir <jugador>`, `/permadeath setdia <n>`, `/permadeath tormenta sumar <horas>|limpiar` (admin)
+
+## Config
+`config/permadeath.properties`: segundos del ban, jugadores exentos, avisos de organizacion por fase.
+
+## Anadir mecanicas
+Implementa `com.permadeath.mechanics.Mechanic` y registrala en `MechanicRegistry.registerAll()`.
+
+## Compilar en GitHub
+1. Sube todo el contenido de esta carpeta a un repo (incluida la carpeta `.github`).
+2. Pestana **Actions** -> workflow **build** -> espera a que termine.
+3. Descarga el artefacto **permadeath-mod** y usa el `.jar` SIN `-sources`.
+Servidor: Fabric Loader 0.19.3+, Fabric API 26.2 y Java 25.
