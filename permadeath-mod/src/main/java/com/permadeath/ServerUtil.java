@@ -19,6 +19,17 @@ public final class ServerUtil {
         server.getCommands().performPrefixedCommand(source, command);
     }
 
+    /** Igual que run(), pero devuelve si el comando tuvo exito (y registra el motivo si falla). */
+    public static boolean runChecked(MinecraftServer server, String command) {
+        CommandSourceStack source = server.createCommandSourceStack().withSuppressedOutput();
+        try {
+            return server.getCommands().getDispatcher().execute(command, source) > 0;
+        } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            PermadeathMod.LOGGER.warn("Comando fallido: {} -> {}", command, e.getMessage());
+            return false;
+        }
+    }
+
     public static void broadcast(MinecraftServer server, Component message) {
         server.getPlayerList().broadcastSystemMessage(message, false);
     }

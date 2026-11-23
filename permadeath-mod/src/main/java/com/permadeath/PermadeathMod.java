@@ -1,5 +1,7 @@
 package com.permadeath;
 
+import com.permadeath.mechanics.AggroMobs;
+import com.permadeath.mechanics.DropRemoval;
 import com.permadeath.mechanics.MechanicRegistry;
 import com.permadeath.mechanics.MobHooks;
 import net.fabricmc.api.ModInitializer;
@@ -27,6 +29,7 @@ public class PermadeathMod implements ModInitializer {
         config = PermadeathConfig.load();
         MechanicRegistry.registerAll();
         MobHooks.register();
+        DropRemoval.register();
         FirstJoin.register();
         PermadeathCommands.register();
 
@@ -56,6 +59,7 @@ public class PermadeathMod implements ModInitializer {
             StormManager.tick(s, state);
             DeathHandler.tickBans(s, state);
             FirstJoin.tick(s, state);
+            AggroMobs.tick(s);
         });
 
         LOGGER.info("Permadeath cargado.");

@@ -34,7 +34,7 @@ public final class PermadeathConfig {
             # Aqui tambien van las reglas de ORGANIZACION que dependen de los jugadores.
             phase.0.announce=Minecraft vanilla. Cada muerte activa una tormenta perpetua.
             phase.1.announce=¡Todas las arañas ahora tienen efectos de poción! (entre 1 y 3 al azar)|Doble de mobs|Mínimo 4 jugadores para pasar la noche
-            #phase.2.announce=Desde hoy no se permiten zonas comunitarias.
+            #phase.3.announce=Aqui iran los avisos del dia 30.
             """;
 
     public static PermadeathConfig load() {
@@ -68,6 +68,20 @@ public final class PermadeathConfig {
         } catch (IOException | RuntimeException e) {
             PermadeathMod.LOGGER.error("Error leyendo permadeath.properties, usando valores por defecto", e);
         }
+        // Avisos incorporados (se usan si el archivo de config no define esa fase)
+        cfg.announcements.putIfAbsent(1, List.of(
+                "¡Todas las arañas ahora tienen efectos de poción! (entre 1 y 3 al azar)",
+                "Doble de mobs",
+                "Mínimo 4 jugadores para pasar la noche"));
+        cfg.announcements.putIfAbsent(2, List.of(
+                "Ciclo de día y noche constante: no puedes saltar la noche",
+                "Todos los mobs pacíficos ahora son agresivos y los pigmans están cabreados de antemano",
+                "Todas las arañas ahora tienen de 3 a 5 efectos",
+                "Todas las arañas aparecen con un esqueleto encima (1 de 5 clases)",
+                "1 de cada 100 Ravagers suelta un Tótem de Inmortalidad",
+                "Todos los Phantoms son ahora de tamaño 9 y doble de vida",
+                "Sin drops: Iron Golems, Pigmans, Ghasts, Guardianes, Magma Cubes, Endermans, Brujas, Wither Skeletons, Evokers, Phantoms, Slimes, Drowneds y Blazes",
+                "Ya no puedes ayudar o ser ayudado por jugadores externos a tu equipo a cazar/sobrevivir (raids, cacerías, wither bosses...)"));
         return cfg;
     }
 }

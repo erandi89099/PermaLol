@@ -18,7 +18,8 @@ public final class MechanicRegistry {
     public static void registerAll() {
         register(new SleepMinPlayers()); // Dia 10: minimo 4 jugadores para pasar la noche
         // Dia 10: doble de mobs y efectos en aranas -> ver MobHooks (se registra en PermadeathMod)
-        // Ejemplo (fase 2 = dia 20):
+        // Dia 20: ver MobHooks, DropRemoval y AggroMobs (se registran en PermadeathMod)
+        // Ejemplo (fase 3 = dia 30):
         // register(new MiMecanica());
     }
 

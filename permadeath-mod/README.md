@@ -20,6 +20,17 @@ El dia 1 empieza al abrir el mundo por primera vez; cada 24 h reales sube un dia
 - Doble de mobs hostiles.
 - Minimo 4 jugadores durmiendo para pasar la noche.
 
+## Dia 20 (fase 2)
+- Ciclo dia/noche constante: ya no se puede saltar la noche.
+- Mobs pacificos agresivos (peces, caballos, murcielagos, abejas, gatos, pollos, vacas, delfines, zorros, llamas,
+  ocelotes, pandas, loros, cerdos, conejos, ovejas, golems de nieve, calamares, tortugas, aldeanos, lobos) y pigmans enfadados.
+- Aranas: de 3 a 5 efectos, y aparecen con un esqueleto encima (5 clases).
+- 1 de cada 100 Ravagers suelta un Totem de Inmortalidad.
+- Phantoms de tamano 9 y doble de vida.
+- Sin drops: Iron Golems, Pigmans, Ghasts, Guardianes, Magma Cubes, Endermans, Brujas, Wither Skeletons, Evokers,
+  Phantoms, Slimes, Drowneds y Blazes.
+- Regla de organizacion (solo aviso): no se puede ayudar ni ser ayudado por jugadores externos al equipo.
+
 ## Comandos
 - `/permadeath estado`, `/permadeath mensaje <texto>` (todos)
 - `/permadeath revivir <jugador>`, `/permadeath setdia <n>`, `/permadeath tormenta sumar <horas>|limpiar` (admin)
