@@ -11,6 +11,15 @@ public final class StormManager {
 
     private StormManager() {}
 
+    /**
+     * Horas de tormenta por muerte: el numero del dia, pero cada 25 dias se reinicia "como si fuese el dia 1"
+     * (dia 24 -> 24 h, dia 25 -> 1 h, dia 26 -> 2 h ... dia 49 -> 25 h, dia 50 -> 1 h).
+     */
+    public static int hoursForDay(int day, int resetDays) {
+        int resets = day / resetDays;
+        return day - resets * resetDays + (resets > 0 ? 1 : 0);
+    }
+
     /** Suma horas a la tormenta: si sigue activa se acumulan sobre lo restante. */
     public static void addHours(SeasonState state, long hours, long nowMs) {
         state.stormEndMs = Math.max(state.stormEndMs, nowMs) + hours * SeasonState.HOUR_MS;

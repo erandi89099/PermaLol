@@ -22,14 +22,27 @@ El dia 1 empieza al abrir el mundo por primera vez; cada 24 h reales sube un dia
 
 ## Dia 20 (fase 2)
 - Ciclo dia/noche constante: ya no se puede saltar la noche.
-- Mobs pacificos agresivos (peces, caballos, murcielagos, abejas, gatos, pollos, vacas, delfines, zorros, llamas,
-  ocelotes, pandas, loros, cerdos, conejos, ovejas, golems de nieve, calamares, tortugas, aldeanos, lobos) y pigmans enfadados.
+- Todos los mobs no hostiles (animales, acuaticos, ajolotes, sniffers, camellos, allays, aldeanos, golem de nieve...)
+  son agresivos (incluidos golems y mascotas domesticadas) y los pigmans estan enfadados de antemano.
 - Aranas: de 3 a 5 efectos, y aparecen con un esqueleto encima (5 clases).
 - 1 de cada 100 Ravagers suelta un Totem de Inmortalidad.
 - Phantoms de tamano 9 y doble de vida.
 - Sin drops: Iron Golems, Pigmans, Ghasts, Guardianes, Magma Cubes, Endermans, Brujas, Wither Skeletons, Evokers,
   Phantoms, Slimes, Drowneds y Blazes.
 - Regla de organizacion (solo aviso): no se puede ayudar ni ser ayudado por jugadores externos al equipo.
+
+## Dia 25 (sorpresa) y reset del Death Train
+- Cada 25 dias (25, 50, 75, 100) las horas de tormenta por muerte se reinician como si fuese el dia 1
+  (dia 24 -> 24 h, dia 25 -> 1 h, dia 26 -> 2 h ... dia 49 -> 25 h, dia 50 -> 1 h).
+- Durante el Death Train (tormenta activa) todos los mobs tienen Fuerza I, Velocidad I y Resistencia I.
+- Aranas con 5 efectos. Ravagers con Fuerza II y Velocidad I; tótem con 20%.
+- Gigaslimes (tamano 15, doble vida), giga magmacubes (tamano 16), ghast demoniacos (40-60 vida, explosion 3-5).
+- Armadura de netherite: gigaslime = peto, giga magmacube = pantalones, ghast demoniaco = botas, arana de cueva = casco
+  (probabilidades en `day25.drop.*` del config). Cada pieza equipada da +1 corazon.
+
+## Desde el inicio del mundo
+- Sin netherita manual: el ancient debris se convierte en netherrack al cargar los chunks del Nether y los items
+  ancient debris / netherite scrap / lingotes / bloques / plantillas de mejora se quitan de todas las tablas de loot.
 
 ## Comandos
 - `/permadeath estado`, `/permadeath mensaje <texto>` (todos)

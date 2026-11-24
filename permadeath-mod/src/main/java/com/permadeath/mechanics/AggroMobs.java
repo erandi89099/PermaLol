@@ -7,6 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -23,16 +24,10 @@ import java.util.*;
  * Se anade un objetivo de IA a los mobs cercanos a cada jugador (se comprueba cada segundo).
  */
 public final class AggroMobs {
-    private static final Set<String> PASSIVE = Set.of(
-            "minecraft:cod", "minecraft:salmon", "minecraft:pufferfish", "minecraft:tropical_fish",
-            "minecraft:horse", "minecraft:bat", "minecraft:bee", "minecraft:cat", "minecraft:chicken",
-            "minecraft:cow", "minecraft:dolphin", "minecraft:fox", "minecraft:llama", "minecraft:trader_llama",
-            "minecraft:ocelot", "minecraft:panda", "minecraft:parrot", "minecraft:pig", "minecraft:rabbit",
-            "minecraft:sheep", "minecraft:snow_golem", "minecraft:squid", "minecraft:glow_squid",
-            "minecraft:turtle", "minecraft:villager", "minecraft:wolf");
     private static final String PIGMAN = "minecraft:zombified_piglin";
     /** Mobs que no se mueven por navegacion normal: se les da un empujon directo hacia el jugador. */
-    private static final Set<String> NUDGE = Set.of("minecraft:bat", "minecraft:squid", "minecraft:glow_squid");
+    private static final Set<String> NUDGE = Set.of("minecraft:bat", "minecraft:squid", "minecraft:glow_squid",
+            "minecraft:allay", "minecraft:happy_ghast");
 
     private static final float DAMAGE = 3.0f; // 1,5 corazones por golpe
 
@@ -65,7 +60,10 @@ public final class AggroMobs {
             for (Mob mob : level.getEntitiesOfClass(Mob.class, p.getBoundingBox().inflate(48.0))) {
                 String id = String.valueOf(EntityType.getKey(mob.getType()));
                 boolean pigman = id.equals(PIGMAN);
-                if (!pigman && !PASSIVE.contains(id)) continue;
+                // Todo lo que no es hostil: animales, acuaticos, ajolotes, sniffers, camellos, allays, aldeanos,
+                // golems (de nieve y de hierro) y mascotas domesticadas. Todos los mobs cuentan.
+                boolean passive = mob.getType().getCategory() != MobCategory.MONSTER;
+                if (!pigman && !passive) continue;
                 if (DONE.add(mob)) apply(mob, pigman, NUDGE.contains(id));
             }
         }

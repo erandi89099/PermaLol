@@ -1,9 +1,12 @@
 package com.permadeath;
 
 import com.permadeath.mechanics.AggroMobs;
+import com.permadeath.mechanics.DeathTrain;
 import com.permadeath.mechanics.DropRemoval;
 import com.permadeath.mechanics.MechanicRegistry;
 import com.permadeath.mechanics.MobHooks;
+import com.permadeath.mechanics.NetheriteArmor;
+import com.permadeath.mechanics.NetheriteLock;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -30,6 +33,7 @@ public class PermadeathMod implements ModInitializer {
         MechanicRegistry.registerAll();
         MobHooks.register();
         DropRemoval.register();
+        NetheriteLock.register();
         FirstJoin.register();
         PermadeathCommands.register();
 
@@ -53,6 +57,7 @@ public class PermadeathMod implements ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register(s -> {
             if (state == null) return;
             MobHooks.tick();
+            NetheriteLock.tickChunks();
             MechanicRegistry.tick(s, PhaseManager.currentPhase());
             if (++tickCounter % 20 != 0) return; // una vez por segundo
             PhaseManager.tick(s, state, config);
@@ -60,6 +65,8 @@ public class PermadeathMod implements ModInitializer {
             DeathHandler.tickBans(s, state);
             FirstJoin.tick(s, state);
             AggroMobs.tick(s);
+            DeathTrain.tick(s, state);
+            NetheriteArmor.tick(s);
         });
 
         LOGGER.info("Permadeath cargado.");

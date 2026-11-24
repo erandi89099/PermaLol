@@ -18,8 +18,10 @@ public final class DeathHandler {
 
         String name = dead.getName().getString();
 
-        // 1) Tormenta: tantas horas reales como el numero del dia, acumulable
-        StormManager.addHours(state, day, now);
+        // 1) Tormenta: tantas horas reales como el numero del dia, acumulable.
+        //    Cada 25 dias el contador se reinicia "como si fuese el dia 1" (dia 25 -> 1 h, dia 26 -> 2 h...)
+        int stormHours = StormManager.hoursForDay(day, cfg.stormResetDays);
+        StormManager.addHours(state, stormHours, now);
         long remaining = StormManager.remainingMs(state, now);
 
         // 2) Pantalla: "¡Permadeath!" + "<jugador> ha muerto" para todos, con sonido
@@ -45,7 +47,7 @@ public final class DeathHandler {
         }
 
         // 5) Info de tormenta
-        ServerUtil.broadcast(server, Component.literal("Tormenta perpetua: +" + day + " h (total restante: "
+        ServerUtil.broadcast(server, Component.literal("Tormenta perpetua: +" + stormHours + " h (total restante: "
                 + ServerUtil.formatMs(remaining) + ")").withStyle(ChatFormatting.GRAY));
 
         // 6) Baneo programado

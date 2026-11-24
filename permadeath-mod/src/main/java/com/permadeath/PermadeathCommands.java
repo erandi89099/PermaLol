@@ -88,6 +88,7 @@ public final class PermadeathCommands {
         st.startMs = System.currentTimeMillis() - (long) (dia - 1) * SeasonState.DAY_MS;
         st.lastPhaseAnnounced = PhaseManager.phaseForDay(dia, PermadeathMod.config) - 1;
         st.seasonEndAnnounced = false;
+        st.lastResetAnnounced = Math.max(0, dia / PermadeathMod.config.stormResetDays - 1);
         st.save();
         PhaseManager.refresh(st, PermadeathMod.config);
         src.sendSuccess(() -> Component.literal("Día ajustado a " + dia + "."), true);

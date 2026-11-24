@@ -23,6 +23,8 @@ public final class SeasonState {
     public long stormEndMs;
     public int lastPhaseAnnounced = -1;
     public boolean seasonEndAnnounced = false;
+    /** Ultimo reset del Death Train anunciado (dia/25: 1 = dia 25, 2 = dia 50...). */
+    public int lastResetAnnounced = 0;
     /** Jugador -> momento real en que debe ser baneado. */
     public final Map<String, Long> pendingBans = new LinkedHashMap<>();
     /** Mensajes de muerte personalizados (clave: nombre en minusculas). */
@@ -46,6 +48,7 @@ public final class SeasonState {
                 s.stormEndMs = Long.parseLong(p.getProperty("stormEndMs", "0"));
                 s.lastPhaseAnnounced = Integer.parseInt(p.getProperty("lastPhaseAnnounced", "-1"));
                 s.seasonEndAnnounced = Boolean.parseBoolean(p.getProperty("seasonEndAnnounced", "false"));
+                s.lastResetAnnounced = Integer.parseInt(p.getProperty("lastResetAnnounced", "0"));
                 for (String key : p.stringPropertyNames()) {
                     if (key.startsWith("pending.")) {
                         s.pendingBans.put(key.substring(8), Long.parseLong(p.getProperty(key)));
@@ -72,6 +75,7 @@ public final class SeasonState {
         p.setProperty("stormEndMs", Long.toString(stormEndMs));
         p.setProperty("lastPhaseAnnounced", Integer.toString(lastPhaseAnnounced));
         p.setProperty("seasonEndAnnounced", Boolean.toString(seasonEndAnnounced));
+        p.setProperty("lastResetAnnounced", Integer.toString(lastResetAnnounced));
         pendingBans.forEach((name, t) -> p.setProperty("pending." + name, Long.toString(t)));
         deathMessages.forEach((name, m) -> p.setProperty("msg." + name, m));
         prompted.forEach(name -> p.setProperty("prompted." + name, "true"));

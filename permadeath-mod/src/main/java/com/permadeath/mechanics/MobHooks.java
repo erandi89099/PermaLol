@@ -3,10 +3,12 @@ package com.permadeath.mechanics;
 import com.permadeath.PermadeathMod;
 import com.permadeath.PhaseManager;
 import com.permadeath.ServerUtil;
+import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.level.Level;
 
 import java.util.*;
 
@@ -14,14 +16,20 @@ import java.util.*;
  * Mecanicas sobre mobs hostiles:
  *  Dia 10: doble de mobs; aranas con 1-3 efectos.
  *  Dia 20: aranas con 3-5 efectos y esqueleto encima (5 clases); phantoms tamano 9 y doble vida.
+ *  Dia 25: aranas con 5 efectos; ravagers con Fuerza II y Velocidad I; gigaslimes (15, doble vida),
+ *          giga magmacubes (16) y ghast demoniacos (40-60 vida, explosion 3-5).
  * Las acciones se encolan y se ejecutan al final del tick para no tocar el mundo durante la carga de la entidad.
  */
 public final class MobHooks {
     private static final String TAG_SEEN = "pd_seen";
     private static final String TAG_FX = "pd_fx";
     private static final String TAG_FX2 = "pd_fx2";
+    private static final String TAG_FX3 = "pd_fx3";
     private static final String TAG_RIDER = "pd_rider";
     private static final String TAG_PHANTOM = "pd_phantom";
+    private static final String TAG_RAV = "pd_rav25";
+    private static final String TAG_GIGA = "pd_giga";
+    private static final String TAG_GHAST = "pd_ghast25";
 
     private static final Set<String> NO_DOUBLE = Set.of(
             "minecraft:wither", "minecraft:warden", "minecraft:elder_guardian", "minecraft:ender_dragon");
@@ -37,43 +45,86 @@ public final class MobHooks {
     private static final Random RANDOM = new Random();
     private static boolean suppress = false;
 
+    /** Zonas donde acaba de morir un slime/magmacube grande: sus hijos no se duplican ni se agrandan. */
+    private static final class Zone {
+        final Level level; final double x, y, z, r; final long expire;
+        Zone(Level level, double x, double y, double z, double r, long expire) {
+            this.level = level; this.x = x; this.y = y; this.z = z; this.r = r; this.expire = expire;
+        }
+    }
+    private static final List<Zone> ZONES = new ArrayList<>();
+
     private MobHooks() {}
 
     public static void enqueue(Runnable r) {
         QUEUE.add(r);
     }
 
+    private static boolean inSplitZone(Entity e) {
+        long now = System.currentTimeMillis();
+        ZONES.removeIf(z -> z.expire < now);
+        for (Zone z : ZONES) {
+            if (z.level != e.level()) continue;
+            double dx = e.getX() - z.x, dy = e.getY() - z.y, dz = e.getZ() - z.z;
+            if (dx * dx + dy * dy + dz * dz <= z.r * z.r) return true;
+        }
+        return false;
+    }
+
     public static void register() {
+        // Los slimes y magmacubes se dividen al morir: se anota donde para no tratar a los hijos como mobs nuevos
+        ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
+            String id = String.valueOf(EntityType.getKey(entity.getType()));
+            if ((id.equals("minecraft:slime") || id.equals("minecraft:magma_cube")) && entity.getBbWidth() >= 1.0f) {
+                ZONES.add(new Zone(entity.level(), entity.getX(), entity.getY(), entity.getZ(),
+                        entity.getBbWidth() + 3.0, System.currentTimeMillis() + 6000L));
+            }
+        });
+
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (PermadeathMod.state == null) return;
             if (entity.getType().getCategory() != MobCategory.MONSTER) return;
 
             String id = String.valueOf(EntityType.getKey(entity.getType()));
             int phase = PhaseManager.currentPhase();
+            boolean day25 = PhaseManager.day25Active();
             UUID uuid = entity.getUUID();
+            boolean slimeLike = id.equals("minecraft:slime") || id.equals("minecraft:magma_cube");
+            boolean splitChild = slimeLike && inSplitZone(entity);
 
             // Doble de mobs (solo mobs "nuevos": los ya vistos llevan la etiqueta guardada)
-            if (entity.addTag(TAG_SEEN) && phase >= 1 && !suppress && !NO_DOUBLE.contains(id)) {
+            if (entity.addTag(TAG_SEEN) && phase >= 1 && !suppress && !splitChild && !NO_DOUBLE.contains(id)) {
                 QUEUE.add(() -> cloneMob(uuid, id));
             }
 
             boolean spider = id.equals("minecraft:spider") || id.equals("minecraft:cave_spider");
             if (spider) {
-                if (phase >= 2) {
-                    // Dia 20: de 3 a 5 efectos (se limpian los anteriores)
+                if (day25) {
+                    if (entity.addTag(TAG_FX3)) QUEUE.add(() -> applySpiderEffects(uuid, 5, 5, true));
+                } else if (phase >= 2) {
                     if (entity.addTag(TAG_FX2)) QUEUE.add(() -> applySpiderEffects(uuid, 3, 5, true));
                 } else if (phase >= 1) {
                     if (entity.addTag(TAG_FX)) QUEUE.add(() -> applySpiderEffects(uuid, 1, 3, false));
                 }
-                // Dia 20: esqueleto encima de cada arana
                 if (phase >= 2 && id.equals("minecraft:spider") && entity.addTag(TAG_RIDER)) {
                     QUEUE.add(() -> spawnRider(entity));
                 }
             }
 
-            // Dia 20: phantoms de tamano 9 y doble de vida
             if (phase >= 2 && id.equals("minecraft:phantom") && entity.addTag(TAG_PHANTOM)) {
                 QUEUE.add(() -> buffPhantom(uuid));
+            }
+
+            if (day25) {
+                if (id.equals("minecraft:ravager") && entity.addTag(TAG_RAV)) {
+                    QUEUE.add(() -> buffRavager(uuid));
+                }
+                if (slimeLike && entity.addTag(TAG_GIGA) && !splitChild) {
+                    QUEUE.add(() -> buffGiga(uuid, id.equals("minecraft:slime")));
+                }
+                if (id.equals("minecraft:ghast") && entity.addTag(TAG_GHAST)) {
+                    QUEUE.add(() -> buffGhast(uuid));
+                }
             }
         });
     }
@@ -112,6 +163,31 @@ public final class MobHooks {
         ServerUtil.run(PermadeathMod.server, "attribute " + uuid + " minecraft:max_health base set 40");
         // Se incluyen las dos grafias de la clave por compatibilidad entre versiones
         ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Size:9,size:9,Health:40f}");
+    }
+
+    // ---------------- Dia 25 ----------------
+
+    private static void buffRavager(UUID uuid) {
+        ServerUtil.run(PermadeathMod.server, "effect give " + uuid + " minecraft:strength infinite 1 true"); // Fuerza II
+        ServerUtil.run(PermadeathMod.server, "effect give " + uuid + " minecraft:speed infinite 0 true");    // Velocidad I
+    }
+
+    /** Gigaslime: tamano 15 y doble de vida. Giga magmacube: tamano 16. (La clave Size guarda tamano-1.) */
+    private static void buffGiga(UUID uuid, boolean slime) {
+        int size = slime ? 15 : 16;
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Size:" + (size - 1) + "}");
+        int hp = slime ? size * size * 2 : size * size;
+        if (slime) ServerUtil.run(PermadeathMod.server, "attribute " + uuid + " minecraft:max_health base set " + hp);
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Health:" + hp + "f}");
+    }
+
+    /** Ghast demoniaco: 40-60 de vida y bolas de fuego con explosion de potencia 3, 4 o 5. */
+    private static void buffGhast(UUID uuid) {
+        int hp = 40 + RANDOM.nextInt(21);
+        int power = 3 + RANDOM.nextInt(3);
+        ServerUtil.run(PermadeathMod.server, "attribute " + uuid + " minecraft:max_health base set " + hp);
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Health:" + hp + "f,ExplosionPower:" + power
+                + "b,explosion_power:" + power + "b}");
     }
 
     // ---------------- Esqueleto sobre la arana (5 clases) ----------------
