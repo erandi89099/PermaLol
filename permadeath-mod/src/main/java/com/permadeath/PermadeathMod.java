@@ -3,7 +3,10 @@ package com.permadeath;
 import com.permadeath.mechanics.AggroMobs;
 import com.permadeath.mechanics.DeathTrain;
 import com.permadeath.mechanics.DropRemoval;
+import com.permadeath.mechanics.EnderMobs;
+import com.permadeath.mechanics.ExplosiveShulkers;
 import com.permadeath.mechanics.MechanicRegistry;
+import com.permadeath.mechanics.MobCap;
 import com.permadeath.mechanics.MobHooks;
 import com.permadeath.mechanics.NetheriteArmor;
 import com.permadeath.mechanics.NetheriteLock;
@@ -34,6 +37,8 @@ public class PermadeathMod implements ModInitializer {
         MobHooks.register();
         DropRemoval.register();
         NetheriteLock.register();
+        EnderMobs.register();
+        ExplosiveShulkers.register();
         FirstJoin.register();
         PermadeathCommands.register();
 
@@ -67,6 +72,8 @@ public class PermadeathMod implements ModInitializer {
             AggroMobs.tick(s);
             DeathTrain.tick(s, state);
             NetheriteArmor.tick(s);
+            EnderMobs.tick(s);
+            MobCap.tick();
         });
 
         LOGGER.info("Permadeath cargado.");

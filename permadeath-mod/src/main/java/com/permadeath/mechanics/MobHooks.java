@@ -1,5 +1,6 @@
 package com.permadeath.mechanics;
 
+import com.permadeath.PermadeathConfig;
 import com.permadeath.PermadeathMod;
 import com.permadeath.PhaseManager;
 import com.permadeath.ServerUtil;
@@ -7,17 +8,20 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.Level;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
- * Mecanicas sobre mobs hostiles:
- *  Dia 10: doble de mobs; aranas con 1-3 efectos.
+ * Mecanicas sobre mobs:
+ *  Dia 10: aranas con 1-3 efectos (el doble mobcap esta en MobCap).
  *  Dia 20: aranas con 3-5 efectos y esqueleto encima (5 clases); phantoms tamano 9 y doble vida.
- *  Dia 25: aranas con 5 efectos; ravagers con Fuerza II y Velocidad I; gigaslimes (15, doble vida),
- *          giga magmacubes (16) y ghast demoniacos (40-60 vida, explosion 3-5).
+ *  Dia 25: aranas con 5 efectos; ravagers; gigaslimes, giga magmacubes y ghast demoniacos.
+ *  Dia 30: esqueletos con clase, calamares->guardianes, murcielagos->blazes, creepers electricos, pillagers,
+ *          pigmans con armadura, golems, endermans, silverfish, nombres especiales, Ender Ghast/Creeper en el End.
  * Las acciones se encolan y se ejecutan al final del tick para no tocar el mundo durante la carga de la entidad.
  */
 public final class MobHooks {
@@ -30,9 +34,16 @@ public final class MobHooks {
     private static final String TAG_RAV = "pd_rav25";
     private static final String TAG_GIGA = "pd_giga";
     private static final String TAG_GHAST = "pd_ghast25";
-
-    private static final Set<String> NO_DOUBLE = Set.of(
-            "minecraft:wither", "minecraft:warden", "minecraft:elder_guardian", "minecraft:ender_dragon");
+    private static final String TAG_CLASS = "pd_class";
+    private static final String TAG_CONV = "pd_conv";
+    private static final String TAG_GOLEM = "pd_golem30";
+    private static final String TAG_CHARGED = "pd_charged";
+    private static final String TAG_PILL = "pd_pill30";
+    private static final String TAG_PIG = "pd_pig30";
+    private static final String TAG_ENDERMAN = "pd_ender30";
+    private static final String TAG_SF = "pd_sf30";
+    private static final String TAG_NAMED = "pd_named";
+    private static final String TAG_END = "pd_endroll";
 
     /** {efecto, amplificador}: Velocidad III, Fuerza IV, Salto V, Brillo, Regeneracion IV, Invisibilidad,
      *  Caida lenta, Resistencia III. */
@@ -45,7 +56,7 @@ public final class MobHooks {
     private static final Random RANDOM = new Random();
     private static boolean suppress = false;
 
-    /** Zonas donde acaba de morir un slime/magmacube grande: sus hijos no se duplican ni se agrandan. */
+    /** Zonas donde acaba de morir un slime/magmacube grande: sus hijos no se agrandan. */
     private static final class Zone {
         final Level level; final double x, y, z, r; final long expire;
         Zone(Level level, double x, double y, double z, double r, long expire) {
@@ -72,7 +83,7 @@ public final class MobHooks {
     }
 
     public static void register() {
-        // Los slimes y magmacubes se dividen al morir: se anota donde para no tratar a los hijos como mobs nuevos
+        // Los slimes y magmacubes se dividen al morir: se anota donde para que los hijos no se agranden
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
             String id = String.valueOf(EntityType.getKey(entity.getType()));
             if ((id.equals("minecraft:slime") || id.equals("minecraft:magma_cube")) && entity.getBbWidth() >= 1.0f) {
@@ -83,19 +94,52 @@ public final class MobHooks {
 
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (PermadeathMod.state == null) return;
-            if (entity.getType().getCategory() != MobCategory.MONSTER) return;
 
             String id = String.valueOf(EntityType.getKey(entity.getType()));
             int phase = PhaseManager.currentPhase();
             boolean day25 = PhaseManager.day25Active();
+            boolean day30 = PhaseManager.dayAtLeast(30);
             UUID uuid = entity.getUUID();
+
+            // ---- Dia 30: transformaciones de mobs no hostiles ----
+            if (day30) {
+                if ((id.equals("minecraft:squid") || id.equals("minecraft:glow_squid")) && entity.addTag(TAG_CONV)) {
+                    QUEUE.add(() -> replaceWith(entity, "minecraft:guardian", "Calamar Guardián", "", "", "~",
+                            nid -> effect(nid, "speed", 1)));
+                    return;
+                }
+                if (id.equals("minecraft:bat") && entity.addTag(TAG_CONV)) {
+                    QUEUE.add(() -> replaceWith(entity, "minecraft:blaze", "Murciélago Blaze", "", "", "~",
+                            nid -> effect(nid, "resistance", 1)));
+                    return;
+                }
+                if (id.equals("minecraft:iron_golem") && entity.addTag(TAG_GOLEM)) {
+                    QUEUE.add(() -> effect(uuid, "speed", 3)); // Velocidad IV
+                }
+            }
+
+            if (entity.getType().getCategory() != MobCategory.MONSTER) return;
+
+            // ---- Dia 30: endermans del End -> Ender Ghast / Ender Creeper ----
+            if (day30 && !suppress && id.equals("minecraft:enderman") && Level.END.equals(level.dimension())
+                    && entity.addTag(TAG_END)) {
+                PermadeathConfig cfg = PermadeathMod.config;
+                int roll = RANDOM.nextInt(100);
+                if (roll < cfg.enderGhastPercent) {
+                    entity.addTag(TAG_SEEN);
+                    QUEUE.add(() -> replaceWith(entity, "minecraft:ghast", EnderMobs.GHAST_NAME,
+                            ",\"" + TAG_GHAST + "\"", "", "~4", nid -> buffGhast(nid, null)));
+                    return;
+                } else if (roll < cfg.enderGhastPercent + cfg.enderCreeperPercent) {
+                    entity.addTag(TAG_SEEN);
+                    QUEUE.add(() -> replaceWith(entity, "minecraft:creeper", EnderMobs.CREEPER_NAME,
+                            ",\"" + TAG_CHARGED + "\"", ",powered:1b", "~", nid -> effect(nid, "invisibility", 0)));
+                    return;
+                }
+            }
+
             boolean slimeLike = id.equals("minecraft:slime") || id.equals("minecraft:magma_cube");
             boolean splitChild = slimeLike && inSplitZone(entity);
-
-            // Doble de mobs (solo mobs "nuevos": los ya vistos llevan la etiqueta guardada)
-            if (entity.addTag(TAG_SEEN) && phase >= 1 && !suppress && !splitChild && !NO_DOUBLE.contains(id)) {
-                QUEUE.add(() -> cloneMob(uuid, id));
-            }
 
             boolean spider = id.equals("minecraft:spider") || id.equals("minecraft:cave_spider");
             if (spider) {
@@ -123,7 +167,41 @@ public final class MobHooks {
                     QUEUE.add(() -> buffGiga(uuid, id.equals("minecraft:slime")));
                 }
                 if (id.equals("minecraft:ghast") && entity.addTag(TAG_GHAST)) {
-                    QUEUE.add(() -> buffGhast(uuid));
+                    QUEUE.add(() -> buffGhast(uuid, "Ghast Demoníaco"));
+                }
+            }
+
+            if (day30) {
+                // Nombres especiales para los gigas y ghasts que ya existian
+                if (slimeLike && entity.getBbWidth() >= 7.0f && entity.addTag(TAG_NAMED)) {
+                    String n = id.equals("minecraft:slime") ? "Gigaslime" : "Giga Magmacube";
+                    QUEUE.add(() -> nameMob(uuid, n));
+                }
+                if (id.equals("minecraft:ghast") && entity instanceof LivingEntity le && le.getMaxHealth() >= 30.0f
+                        && !(entity.hasCustomName()) && entity.addTag(TAG_NAMED)) {
+                    QUEUE.add(() -> nameMob(uuid, "Ghast Demoníaco"));
+                }
+
+                if (id.equals("minecraft:skeleton") && entity.addTag(TAG_CLASS)) {
+                    QUEUE.add(() -> assignClass(entity));
+                }
+                if (id.equals("minecraft:creeper") && entity.addTag(TAG_CHARGED)) {
+                    QUEUE.add(() -> ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {powered:1b}"));
+                }
+                if (id.equals("minecraft:pillager") && entity.addTag(TAG_PILL)) {
+                    QUEUE.add(() -> buffPillager(uuid));
+                }
+                if (id.equals("minecraft:zombified_piglin") && entity.addTag(TAG_PIG)) {
+                    QUEUE.add(() -> dressPigman(uuid));
+                }
+                if (id.equals("minecraft:enderman") && entity.addTag(TAG_ENDERMAN)) {
+                    QUEUE.add(() -> effect(uuid, "strength", 1)); // Fuerza II
+                }
+                if (id.equals("minecraft:silverfish") && entity.addTag(TAG_SF)) {
+                    QUEUE.add(() -> applySpiderEffects(uuid, 5, 5, false));
+                }
+                if (id.equals("minecraft:shulker") && entity.addTag(TAG_NAMED)) {
+                    QUEUE.add(() -> nameMob(uuid, "Shulker Explosivo"));
                 }
             }
         });
@@ -138,12 +216,34 @@ public final class MobHooks {
         }
     }
 
-    private static void cloneMob(UUID uuid, String id) {
-        suppress = true; // el clon no genera otro clon
+    // ---------------- Utilidades ----------------
+
+    private static void effect(UUID uuid, String effect, int amplifier) {
+        ServerUtil.run(PermadeathMod.server, "effect give " + uuid + " minecraft:" + effect + " infinite " + amplifier + " true");
+    }
+
+    private static void nameMob(UUID uuid, String name) {
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {CustomName:\"" + name + "\",CustomNameVisible:1b}");
+    }
+
+    /** Sustituye un mob por otro (mismo sitio), con nombre y etiquetas. */
+    private static void replaceWith(Entity old, String newId, String name, String extraTags, String extraNbt,
+                                    String yPos, Consumer<UUID> afterSpawn) {
+        if (old.isRemoved()) return;
+        UUID nid = UUID.randomUUID();
+        String nbt = "{UUID:" + SkeletonClasses.uuidInts(nid) + ",Tags:[\"" + TAG_SEEN + "\"" + extraTags + "]"
+                + ",CustomName:\"" + name + "\",CustomNameVisible:1b" + extraNbt + "}";
+        boolean ok;
+        suppress = true;
         try {
-            ServerUtil.run(PermadeathMod.server, "execute as " + uuid + " at @s run summon " + id + " ~ ~ ~");
+            ok = ServerUtil.runChecked(PermadeathMod.server,
+                    "execute as " + old.getUUID() + " at @s run summon " + newId + " ~ " + yPos + " ~ " + nbt);
         } finally {
             suppress = false;
+        }
+        if (ok) {
+            if (afterSpawn != null) afterSpawn.accept(nid);
+            old.discard();
         }
     }
 
@@ -168,8 +268,8 @@ public final class MobHooks {
     // ---------------- Dia 25 ----------------
 
     private static void buffRavager(UUID uuid) {
-        ServerUtil.run(PermadeathMod.server, "effect give " + uuid + " minecraft:strength infinite 1 true"); // Fuerza II
-        ServerUtil.run(PermadeathMod.server, "effect give " + uuid + " minecraft:speed infinite 0 true");    // Velocidad I
+        effect(uuid, "strength", 1); // Fuerza II
+        effect(uuid, "speed", 0);    // Velocidad I
     }
 
     /** Gigaslime: tamano 15 y doble de vida. Giga magmacube: tamano 16. (La clave Size guarda tamano-1.) */
@@ -179,79 +279,87 @@ public final class MobHooks {
         int hp = slime ? size * size * 2 : size * size;
         if (slime) ServerUtil.run(PermadeathMod.server, "attribute " + uuid + " minecraft:max_health base set " + hp);
         ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Health:" + hp + "f}");
+        if (PhaseManager.dayAtLeast(30)) nameMob(uuid, slime ? "Gigaslime" : "Giga Magmacube");
     }
 
-    /** Ghast demoniaco: 40-60 de vida y bolas de fuego con explosion de potencia 3, 4 o 5. */
-    private static void buffGhast(UUID uuid) {
+    /** Ghast demoniaco: 40-60 de vida y bolas de fuego con explosion de potencia 3, 4 o 5. name == null: no se renombra. */
+    static void buffGhast(UUID uuid, String name) {
         int hp = 40 + RANDOM.nextInt(21);
         int power = 3 + RANDOM.nextInt(3);
         ServerUtil.run(PermadeathMod.server, "attribute " + uuid + " minecraft:max_health base set " + hp);
         ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid + " {Health:" + hp + "f,ExplosionPower:" + power
                 + "b,explosion_power:" + power + "b}");
+        if (name != null && PhaseManager.dayAtLeast(30)) nameMob(uuid, name);
     }
 
-    // ---------------- Esqueleto sobre la arana (5 clases) ----------------
+    // ---------------- Dia 30 ----------------
+
+    private static void buffPillager(UUID uuid) {
+        effect(uuid, "invisibility", 0);
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid
+                + " {equipment:{mainhand:{id:\"minecraft:crossbow\",count:1,components:"
+                + "{\"minecraft:enchantments\":{\"minecraft:quick_charge\":10}}}}}");
+    }
+
+    private static void dressPigman(UUID uuid) {
+        ServerUtil.run(PermadeathMod.server, "data merge entity " + uuid
+                + " {equipment:{head:{id:\"minecraft:diamond_helmet\",count:1},chest:{id:\"minecraft:diamond_chestplate\",count:1},"
+                + "legs:{id:\"minecraft:diamond_leggings\",count:1},feet:{id:\"minecraft:diamond_boots\",count:1}},"
+                + "drop_chances:{head:0f,chest:0f,legs:0f,feet:0f}}");
+    }
+
+    /** Da una clase a un esqueleto. Tactico y Pesadilla son esqueletos Wither: sustituyen al esqueleto normal. */
+    private static void assignClass(Entity old) {
+        if (old.isRemoved()) return;
+        SkeletonClasses.Spec[] set = SkeletonClasses.set(true);
+        SkeletonClasses.Spec spec = set[RANDOM.nextInt(set.length)];
+        if (spec.entity().equals("minecraft:skeleton")) {
+            SkeletonClasses.applyExisting(PermadeathMod.server, old.getUUID(), spec);
+            return;
+        }
+        UUID nid = UUID.randomUUID();
+        boolean ok;
+        suppress = true;
+        try {
+            ok = ServerUtil.runChecked(PermadeathMod.server, "execute as " + old.getUUID() + " at @s run summon "
+                    + spec.entity() + " ~ ~ ~ " + SkeletonClasses.summonNbt(spec, nid));
+        } finally {
+            suppress = false;
+        }
+        if (ok) {
+            if (spec.speed()) SkeletonClasses.applySpeed(PermadeathMod.server, nid);
+            old.discard();
+        } else {
+            PermadeathMod.LOGGER.warn("No se pudo crear la clase {}; se usa el Guerrero", spec.name());
+            SkeletonClasses.applyExisting(PermadeathMod.server, old.getUUID(), set[0]);
+        }
+    }
+
+    // ---------------- Esqueleto sobre la arana ----------------
 
     private static void spawnRider(Entity spider) {
         if (spider.isRemoved() || spider.isVehicle()) return;
         UUID spiderId = spider.getUUID();
         UUID skelId = UUID.randomUUID();
-        int kind = RANDOM.nextInt(5);
+        SkeletonClasses.Spec[] set = SkeletonClasses.set(PhaseManager.dayAtLeast(30));
+        SkeletonClasses.Spec spec = set[RANDOM.nextInt(set.length)];
 
         suppress = true; // el esqueleto jinete no se duplica
         try {
-            String summon = "execute as " + spiderId + " at @s run summon minecraft:skeleton ~ ~ ~ ";
-            boolean ok = ServerUtil.runChecked(PermadeathMod.server, summon + skeletonNbt(kind, skelId));
+            String summon = "execute as " + spiderId + " at @s run summon " + spec.entity() + " ~ ~ ~ ";
+            boolean ok = ServerUtil.runChecked(PermadeathMod.server, summon + SkeletonClasses.summonNbt(spec, skelId));
             if (!ok) {
-                PermadeathMod.LOGGER.warn("No se pudo crear el esqueleto de clase {} con NBT completo; se usa uno basico", kind);
-                ok = ServerUtil.runChecked(PermadeathMod.server, summon + "{UUID:" + uuidInts(skelId)
+                PermadeathMod.LOGGER.warn("No se pudo crear el esqueleto de clase {} ({}) con NBT completo; se usa uno basico", spec.name(), spec.entity());
+                summon = "execute as " + spiderId + " at @s run summon minecraft:skeleton ~ ~ ~ ";
+                ok = ServerUtil.runChecked(PermadeathMod.server, summon + "{UUID:" + SkeletonClasses.uuidInts(skelId)
                         + ",Tags:[\"pd_seen\"],equipment:{mainhand:{id:\"minecraft:bow\",count:1}}}");
             }
-            if (ok) ServerUtil.run(PermadeathMod.server, "ride " + skelId + " mount " + spiderId);
+            if (ok) {
+                if (spec.speed()) SkeletonClasses.applySpeed(PermadeathMod.server, skelId);
+                ServerUtil.run(PermadeathMod.server, "ride " + skelId + " mount " + spiderId);
+            }
         } finally {
             suppress = false;
         }
-    }
-
-    private static String uuidInts(UUID u) {
-        long m = u.getMostSignificantBits(), l = u.getLeastSignificantBits();
-        return "[I;" + (int) (m >> 32) + "," + (int) m + "," + (int) (l >> 32) + "," + (int) l + "]";
-    }
-
-    private static String piece(String id, String components) {
-        return "{id:\"minecraft:" + id + "\",count:1"
-                + (components == null ? "" : ",components:{" + components + "}") + "}";
-    }
-
-    private static String armorSet(String material, String components) {
-        return "head:" + piece(material + "_helmet", components)
-                + ",chest:" + piece(material + "_chestplate", components)
-                + ",legs:" + piece(material + "_leggings", components)
-                + ",feet:" + piece(material + "_boots", components);
-    }
-
-    private static String enchant(String name, int level) {
-        return "\"minecraft:enchantments\":{\"minecraft:" + name + "\":" + level + "}";
-    }
-
-    /**
-     * Clases (segun la imagen): 0 diamante / 20 HP; 1 cota de malla + Arco Punch XX / 40 HP;
-     * 2 hierro + Hacha de hierro Fire Aspect II / 20 HP; 3 oro + Ballesta Sharpness XX / 40 HP;
-     * 4 cuero rojo + Arco Power X / 40 HP.
-     */
-    private static String skeletonNbt(int kind, UUID id) {
-        String hand, armor;
-        boolean tanky = false;
-        switch (kind) {
-            case 1 -> { hand = piece("bow", enchant("punch", 20)); armor = armorSet("chainmail", null); tanky = true; }
-            case 2 -> { hand = piece("iron_axe", enchant("fire_aspect", 2)); armor = armorSet("iron", null); }
-            case 3 -> { hand = piece("crossbow", enchant("sharpness", 20)); armor = armorSet("golden", null); tanky = true; }
-            case 4 -> { hand = piece("bow", enchant("power", 10)); armor = armorSet("leather", "\"minecraft:dyed_color\":11141120"); tanky = true; }
-            default -> { hand = piece("bow", null); armor = armorSet("diamond", null); }
-        }
-        return "{UUID:" + uuidInts(id) + ",Tags:[\"pd_seen\"]"
-                + (tanky ? ",Health:40f,attributes:[{id:\"minecraft:max_health\",base:40}]" : "")
-                + ",equipment:{mainhand:" + hand + "," + armor + "}"
-                + ",drop_chances:{mainhand:0f,head:0f,chest:0f,legs:0f,feet:0f}}";
     }
 }

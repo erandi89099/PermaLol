@@ -32,6 +32,12 @@ public final class PhaseManager {
         return cfg != null && currentDay >= cfg.stormResetDays && currentDay <= cfg.seasonDays;
     }
 
+    /** True desde el dia indicado hasta el final de la serie. */
+    public static boolean dayAtLeast(int day) {
+        PermadeathConfig cfg = PermadeathMod.config;
+        return cfg != null && currentDay >= day && currentDay <= cfg.seasonDays;
+    }
+
     public static int phaseForDay(int day, PermadeathConfig cfg) {
         return Math.max(0, day / cfg.phaseLengthDays);
     }

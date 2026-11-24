@@ -15,6 +15,9 @@ public final class PermadeathConfig {
     public int phaseLengthDays = 10;
     /** Cada cuantos dias se reinicia el Death Train (horas de tormenta "como si fuese el dia 1"). */
     public int stormResetDays = 25;
+    /** Dia 30: % de endermans del End que se convierten en Ender Ghast / Ender Creeper al aparecer. */
+    public int enderGhastPercent = 8;
+    public int enderCreeperPercent = 12;
     /** Nombres (en minusculas) que no son baneados al morir. */
     public Set<String> exempt = new HashSet<>();
     /** Avisos de organizacion por fase (fase -> lista de mensajes). */
@@ -34,6 +37,9 @@ public final class PermadeathConfig {
             phaseLengthDays=10
             # Cada cuantos dias se reinicia el Death Train (horas de tormenta por muerte = dia % este valor)
             stormResetDays=25
+            # Dia 30: porcentaje de endermans del End que aparecen como Ender Ghast / Ender Creeper
+            enderGhastPercent=8
+            enderCreeperPercent=12
             # Jugadores exentos de baneo, separados por coma (ej: Admin1,Admin2)
             exempt=
 
@@ -66,6 +72,8 @@ public final class PermadeathConfig {
             cfg.seasonDays = Integer.parseInt(p.getProperty("seasonDays", "110").trim());
             cfg.phaseLengthDays = Math.max(1, Integer.parseInt(p.getProperty("phaseLengthDays", "10").trim()));
             cfg.stormResetDays = Math.max(1, Integer.parseInt(p.getProperty("stormResetDays", "25").trim()));
+            cfg.enderGhastPercent = Integer.parseInt(p.getProperty("enderGhastPercent", "8").trim());
+            cfg.enderCreeperPercent = Integer.parseInt(p.getProperty("enderCreeperPercent", "12").trim());
             for (String n : p.getProperty("exempt", "").split(",")) {
                 if (!n.isBlank()) cfg.exempt.add(n.trim().toLowerCase());
             }
@@ -92,7 +100,7 @@ public final class PermadeathConfig {
         cfg.announcements.put(0, p0);
         cfg.announcements.putIfAbsent(1, List.of(
                 "¡Todas las arañas ahora tienen efectos de poción! (entre 1 y 3 al azar)",
-                "Doble de mobs",
+                "Doble mobcap de mobs hostiles: pueden aparecer el doble de mobs a la vez",
                 "Mínimo 4 jugadores para pasar la noche"));
         cfg.announcements.putIfAbsent(2, List.of(
                 "Ciclo de día y noche constante: no puedes saltar la noche",
@@ -103,6 +111,22 @@ public final class PermadeathConfig {
                 "Todos los Phantoms son ahora de tamaño 9 y doble de vida",
                 "Sin drops: Iron Golems, Pigmans, Ghasts, Guardianes, Magma Cubes, Endermans, Brujas, Wither Skeletons, Evokers, Phantoms, Slimes, Drowneds y Blazes",
                 "Ya no puedes ayudar o ser ayudado por jugadores externos a tu equipo a cazar/sobrevivir (raids, cacerías, wither bosses...)"));
+        cfg.announcements.putIfAbsent(3, List.of(
+                "Ya no se puede obtener la armadura de Netherite",
+                "Ya no se pueden usar Zonas Comunitarias a excepción del SPAWN",
+                "Los Tótems tienen un 99% de probabilidades de activarse y un 1% de fallar (al activarse, el chat muestra la probabilidad sobre 100)",
+                "Los Mobs Especiales ahora tienen nombre especial",
+                "Los Calamares son ahora Guardianes con Speed II",
+                "Los Murciélagos son ahora Blazes de Resistencia II",
+                "Los Creepers son ahora Eléctricos",
+                "Los Pillagers son ahora invisibles y tienen ballestas de Quick Charge X",
+                "Los Esqueletos son ahora Esqueletos con CLASE y llevan en la mano izquierda flechas de Daño II",
+                "Los Pigmans tienen ahora armadura de diamante",
+                "Los Iron Golems tienen ahora Velocidad IV",
+                "Los Endermans tienen ahora Fuerza II",
+                "Los Silverfish tienen 5 efectos de la misma lista que las Arañas",
+                "Los Shulkers son Shulkers Explosivos y dropean con 20% de probabilidad una Shulker Shell",
+                "Aparecen Ender Ghasts y Ender Creepers en el End"));
         cfg.dayAnnouncements.putIfAbsent(25, List.of(
                 "RESET DEL DEATH TRAIN: cada 25 días el Death Train se vuelve más peligroso y las horas de tormenta por muerte se reinician como si fuese el día 1",
                 "Durante el Death Train todos los mobs tienen Fuerza I, Velocidad I y Resistencia I",

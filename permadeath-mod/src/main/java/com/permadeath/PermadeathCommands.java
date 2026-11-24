@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import com.permadeath.mechanics.MobCap;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class PermadeathCommands {
@@ -51,7 +52,8 @@ public final class PermadeathCommands {
             int next = (phase + 1) * cfg.phaseLengthDays;
             msg = "Día " + day + "/" + cfg.seasonDays + " | Fase " + phase
                     + (next <= cfg.seasonDays ? " | Próximo aumento: día " + next : " | Última fase")
-                    + " | Tormenta restante: " + ServerUtil.formatMs(StormManager.remainingMs(st, now));
+                    + " | Tormenta restante: " + ServerUtil.formatMs(StormManager.remainingMs(st, now))
+                    + " | Mobcap hostil: " + MobCap.current();
         }
         final String out = msg;
         src.sendSuccess(() -> Component.literal(out), false);

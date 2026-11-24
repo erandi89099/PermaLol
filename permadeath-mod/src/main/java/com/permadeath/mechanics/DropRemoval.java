@@ -15,8 +15,9 @@ import java.util.UUID;
 
 /**
  * Dia 20: los mobs de la lista no sueltan items (la experiencia se mantiene) y los Ravagers sueltan un Totem (1%).
- * Dia 25: los Ravagers sueltan Totem con 20%. Gigaslimes, giga magmacubes, ghast demoniacos y aranas de cueva
- *         sueltan piezas de armadura de netherite (configurable en permadeath.properties).
+ * Dia 25-29: los Ravagers sueltan Totem con 20%. Gigaslimes, giga magmacubes, ghast demoniacos y aranas de cueva
+ *         sueltan piezas de armadura de netherite (configurable en permadeath.properties); a partir del dia 30 ya no.
+ * Dia 30: los Shulkers sueltan Shulker Shell con 20% y una dinamita encendida.
  */
 public final class DropRemoval {
     private static final Set<String> NO_DROPS = Set.of(
@@ -36,7 +37,8 @@ public final class DropRemoval {
             UUID uuid = entity.getUUID();
 
             // 1) Limpiar los drops normales (primero, para no borrar los que se anaden despues)
-            if (NO_DROPS.contains(id)) {
+            boolean shulker = id.equals("minecraft:shulker") && PhaseManager.dayAtLeast(30);
+            if (NO_DROPS.contains(id) || shulker) {
                 Level level = entity.level();
                 AABB box = entity.getBoundingBox().inflate(3.0);
                 MobHooks.enqueue(() -> {
@@ -46,14 +48,22 @@ public final class DropRemoval {
                 });
             }
 
+            // Dia 30: los shulkers sueltan Shulker Shell con 20% (en vez del drop normal)
+            if (shulker && RANDOM.nextInt(100) < 20) dropItem(uuid, "shulker_shell");
+            // Shulker Explosivo: al morir deja caer una dinamita encendida
+            if (shulker) {
+                MobHooks.enqueue(() -> ServerUtil.run(PermadeathMod.server,
+                        "execute as " + uuid + " at @s run summon minecraft:tnt ~ ~ ~ {fuse:80s}"));
+            }
+
             // 2) Totem de los Ravagers
             if (id.equals("minecraft:ravager")) {
                 int chance = PhaseManager.day25Active() ? 20 : 1;
                 if (RANDOM.nextInt(100) < chance) dropItem(uuid, "totem_of_undying");
             }
 
-            // 3) Armadura de netherite (dia 25+)
-            if (PhaseManager.day25Active()) {
+            // 3) Armadura de netherite: solo se puede conseguir del dia 25 al 29
+            if (PhaseManager.day25Active() && !PhaseManager.dayAtLeast(30)) {
                 switch (id) {
                     case "minecraft:slime" -> { if (entity.getBbWidth() >= 7.0f) netherite("gigaslime", uuid); }
                     case "minecraft:magma_cube" -> { if (entity.getBbWidth() >= 7.0f) netherite("gigamagmacube", uuid); }

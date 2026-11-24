@@ -17,7 +17,7 @@ El dia 1 empieza al abrir el mundo por primera vez; cada 24 h reales sube un dia
 ## Dia 10 (fase 1)
 - Todas las aranas (y aranas de cueva) reciben entre 1 y 3 efectos infinitos al azar: Velocidad III, Fuerza IV,
   Salto V, Brillo, Regeneracion IV, Invisibilidad, Caida lenta, Resistencia III.
-- Doble de mobs hostiles.
+- Doble mobcap de mobs hostiles (el limite de mobs hostiles se duplica; no se duplican mobs individuales).
 - Minimo 4 jugadores durmiendo para pasar la noche.
 
 ## Dia 20 (fase 2)
@@ -43,6 +43,17 @@ El dia 1 empieza al abrir el mundo por primera vez; cada 24 h reales sube un dia
 ## Desde el inicio del mundo
 - Sin netherita manual: el ancient debris se convierte en netherrack al cargar los chunks del Nether y los items
   ancient debris / netherite scrap / lingotes / bloques / plantillas de mejora se quitan de todas las tablas de loot.
+
+## Dia 30 (fase 3)
+- Ya no se puede obtener armadura de netherite (los drops del dia 25 solo valen del dia 25 al 29).
+- Totems: 99% de activarse / 1% de fallar; al activarse el chat muestra la probabilidad sobre 100 (requiere el mixin).
+- Mobs especiales con nombre. Esqueletos con clase (Guerrero, Infernal, Asesino, Tactico, Pesadilla), 40 de vida y
+  flechas de Dano II en la mano izquierda. Tactico y Pesadilla son esqueletos Wither (sustituyen al normal).
+- Calamares -> Guardianes (Speed II). Murcielagos -> Blazes (Resistencia II). Creepers electricos. Pillagers invisibles con
+  ballestas Quick Charge X. Pigmans con armadura de diamante. Iron Golems con Velocidad IV. Endermans con Fuerza II.
+  Silverfish con 5 efectos de arana.
+- Shulkers Explosivos (sus proyectiles explotan; al morir sueltan una dinamita encendida) y Shulker Shell con 20%.
+- Ender Ghast y Ender Creeper aparecen en el End en lugar de algunos endermans (`enderGhastPercent`, `enderCreeperPercent`).
 
 ## Comandos
 - `/permadeath estado`, `/permadeath mensaje <texto>` (todos)
