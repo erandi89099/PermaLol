@@ -36,7 +36,7 @@ public final class NetheriteLock {
                         || stack.is(Items.NETHERITE_BLOCK)
                         || stack.is(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE)));
 
-        ServerChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
+        ServerChunkEvents.CHUNK_LOAD.register((level, chunk, generated) -> {
             if (Level.NETHER.equals(level.dimension())) TASKS.add(new ChunkTask(level, chunk));
         });
     }
